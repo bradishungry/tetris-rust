@@ -1,0 +1,9 @@
+[package]
+name = "rust"
+version = "0.1.0"
+authors = ["bradboswell"]
+
+[dependencies.sdl2]
+version = "0.31.0"
+features = [ "bundled", "static-link" ]
+
