@@ -2,22 +2,20 @@ Tetris created in rust, using SDL2. In the future, I plan to have some sort of
 machine learning algorithm for AI, just as a learning experience.
 
 ## Progress
--~~Event Loop~~
--Sprite loading
--Input and placement
--Basic animation/rotation
--Units and collision
--Block spawns
--Mechanics
--Score
--Animations for clearing lines
--Difficulty
--Multiplayer
--Basic AI
+-~~Event Loop~~ <br />
+-Sprite loading <br />
+-Input and placement <br />
+-Basic animation/rotation <br />
+-Units and collision <br />
+-Block spawns <br />
+-Mechanics <br />
+-Score <br />
+-Animations for clearing lines <br />
+-Difficulty <br />
+-Multiplayer <br />
+-Basic AI <br />
 
 # Future
--Advanced AI
--Online play
--Challenges
-
-
+-Advanced AI <br />
+-Online play <br />
+-Challenges <br />
