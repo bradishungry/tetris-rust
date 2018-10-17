@@ -13,9 +13,10 @@ pub fn game_loop() {
     let mut graphics = graphics::Graphics::init(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
 
+    let mut i = 0;
     'running: loop {
         let starting_time: Instant = Instant::now();
-
+        i = (i + 1) % 255;
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} |
@@ -26,7 +27,7 @@ pub fn game_loop() {
             }
         }
 
-        graphics.update();
+        graphics.update(i as u8);
 
         let ending_time: Duration = Instant::now().duration_since(starting_time);
 
