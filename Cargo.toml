@@ -1,5 +1,5 @@
 [package]
-name = "rust"
+name = "tetris"
 version = "0.1.0"
 authors = ["bradboswell"]
 

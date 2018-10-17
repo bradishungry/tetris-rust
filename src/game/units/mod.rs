@@ -1,3 +1,5 @@
+//Taken from drbawb/rust-story, will do my own with typedefs/only what i need in the future
+
 use num::Float;
 use std::ops::{Add, Sub, Mul, Div};
 

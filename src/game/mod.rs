@@ -1,6 +1,9 @@
 extern crate sdl2;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use std::collections::hash_map::HashMap;
+use sdl2::render::Texture;
+use sdl2::pixels::Color;
 use std::time::{Duration, Instant};
 
 pub mod graphics;
@@ -9,8 +12,20 @@ pub fn game_loop() {
 
     const FPS: u32 = 60;
 
+    //init SDL rendering things
     let sdl_context = sdl2::init().unwrap();
-    let mut graphics = graphics::Graphics::init(&sdl_context);
+    let video_subsystem = sdl_context.video().unwrap();
+    let window = video_subsystem.window("tetris", 800, 600).position_centered().build().unwrap();
+    let mut canvas = window.into_canvas().build().unwrap();
+    let texture_creator = canvas.texture_creator();
+    let mut texcache: HashMap<String, Texture> = HashMap::new();
+
+    //add the block sprite to our cache
+    graphics::load_sprites(&texture_creator, &mut texcache);
+    canvas.set_draw_color(Color::RGB(0, 255, 255));
+    canvas.clear();
+    canvas.present();
+
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     let mut i = 0;
@@ -27,7 +42,7 @@ pub fn game_loop() {
             }
         }
 
-        graphics.update(i as u8);
+        graphics::update(&mut canvas, &mut texcache, i as u8);
 
         let ending_time: Duration = Instant::now().duration_since(starting_time);
 
