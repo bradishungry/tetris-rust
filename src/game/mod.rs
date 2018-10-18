@@ -21,7 +21,11 @@ pub fn game_loop() {
     let mut texcache: HashMap<String, Texture> = HashMap::new();
 
     //add the block sprite to our cache
-    graphics::load_sprites(&texture_creator, &mut texcache);
+    let block = String::from("../../assets/block.BMP");
+    graphics::load_sprites(block, &texture_creator, &mut texcache);
+    let background = String::from("../../assets/tet.BMP");
+    graphics::load_sprites(background, &texture_creator, &mut texcache);
+
     canvas.set_draw_color(Color::RGB(0, 255, 255));
     canvas.clear();
     canvas.present();

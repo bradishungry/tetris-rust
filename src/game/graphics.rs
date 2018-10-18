@@ -13,16 +13,16 @@ use std::collections::hash_map::Entry;
 use std::path::Path;
 
 
-pub fn load_sprites<'a>(texture_creator: &'a TextureCreator<WindowContext>, texcache: &mut HashMap<String, Texture<'a>>)/* -> (Texture<'a>*/{
+pub fn load_sprites<'a>(location: String, texture_creator: &'a TextureCreator<WindowContext>, texcache: &mut HashMap<String, Texture<'a>>)/* -> (Texture<'a>*/{
 
-    let path = Path::new("../../assets/block.BMP");
+    let path = Path::new(&location[..]);
 
-    let surface = match Surface::load_bmp(path) {
+    let surface = match Surface::load_bmp(&path) {
         Ok(surface) => surface,
         Err(err) => panic!("failed to load: {}", err)
     };
 
-    match texcache.entry(String::from("block")) {
+    match texcache.entry(location.clone()) {
         Entry::Vacant(entry) => {
             match texture_creator.create_texture_from_surface(&surface) {
                 Ok(texture) => {
@@ -38,31 +38,44 @@ pub fn load_sprites<'a>(texture_creator: &'a TextureCreator<WindowContext>, texc
 }
 
 pub fn update(canvas: &mut Canvas<Window>, texcache: &mut HashMap<String, Texture>, i: u8) {
+    {
+    let texture2 = match texcache.get_mut(&String::from("../../assets/tet.BMP")) {
+        Some(texture2) => texture2,
+        None => panic!("Failed to load block"),
+    };
 
-    let texture = match texcache.get_mut(&String::from("block")) {
+    canvas.clear();
+    canvas.copy(&texture2, None, Some(Rect::new(0, 0, 800, 600))).unwrap();
+    }
+
+    let texture = match texcache.get_mut(&String::from("../../assets/block.BMP")) {
         Some(texture) => texture,
         None => panic!("Failed to load block"),
     };
 
+
     let f = i as i32;
-    canvas.set_draw_color(Color::RGB(i, 200, 255 - i));
-    canvas.clear();
+    //canvas.set_draw_color(Color::RGB(i, 200, 255 - i));
+    //canvas.clear();
     texture.set_color_mod(255, 0, 0);
-    canvas.copy(&texture, None, Some(Rect::new(100, f + 200, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(100, f + 232, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(100, f + 264, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(132, f + 200, 32, 32))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(28, f + 200, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(28, f + 226, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(28, f + 252, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(54, f + 200, 26, 26))).unwrap();
     texture.set_color_mod(50, 255, 50);
-    canvas.copy(&texture, None, Some(Rect::new(200, f + 200, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(232, f / 2 + 200, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(264, f + 200, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(200, f + 232, 32, 32))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(128, f + 200, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(154, f / 2 + 200, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(180, f + 200, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(128, f + 226, 26, 26))).unwrap();
 
     texture.set_color_mod(50, 50, 255);
-    canvas.copy(&texture, None, Some(Rect::new(300, f + 200, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(300, f + 232, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(300, f + 264, 32, 32))).unwrap();
-    canvas.copy(&texture, None, Some(Rect::new(332, f + 200, 32, 32))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(228, f + 200, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(228, f + 226, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(228, f + 252, 26, 26))).unwrap();
+    canvas.copy(&texture, None, Some(Rect::new(254, f + 200, 26, 26))).unwrap();
+
+
+
 
     canvas.present();
 }
