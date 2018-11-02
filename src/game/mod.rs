@@ -7,6 +7,7 @@ use sdl2::pixels::Color;
 use std::time::{Duration, Instant};
 
 pub mod graphics;
+pub mod units;
 
 pub fn game_loop() {
 
@@ -32,7 +33,6 @@ pub fn game_loop() {
 
     let mut starting_time: Instant = Instant::now();
     let mut pos = 40;
-    
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 

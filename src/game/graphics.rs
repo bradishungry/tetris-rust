@@ -88,10 +88,10 @@ pub fn update(canvas: &mut Canvas<Window>, texcache: &mut HashMap<String, Textur
         Shape::TBLOCK => { let block = Blocks { color: (255, 0, 255), block_pos: (28, 54, 54, 80, pos + 26, pos + 26, pos, pos + 26) }; 
                             blit_block(block, canvas, texture);},
 
-        Shape::IBLOCK => { let block = Blocks { color: (0, 255, 255), block_pos: (28, 28, 28, 28, pos, pos + 26, pos + 52, pos + 78) }; 
+        Shape::IBLOCK => { let block = Blocks { color: (0, 255, 255), block_pos: (28, 28, 28, 28, pos, pos + 26, pos + 52, pos + 78) };
                             blit_block(block, canvas, texture);},
 
-        _ => println!("NAH"),
+        //_ => println!("NAH"),
     };
 
 

@@ -1,6 +1,6 @@
 //Taken from drbawb/rust-story, will do my own with typedefs/only what i need in the future
 
-use num::Float;
+pub mod board;
 
 const TILE_SIZE: i32 =  26;
 const SCALE: f64 = 1.0;
