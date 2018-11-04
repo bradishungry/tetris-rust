@@ -3,6 +3,13 @@ name = "tetris"
 version = "0.1.0"
 authors = ["bradboswell"]
 
+[dependencies]
+rand = "0.5.5"
+winit = "0.17.2"
+gfx-hal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" }
+gfx-backend-metal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" , optional = true}
+
+
 [dependencies.sdl2]
 version = "0.31.0"
 features = [ "bundled", "static-link" ]
