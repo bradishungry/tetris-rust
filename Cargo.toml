@@ -7,10 +7,10 @@ authors = ["bradboswell"]
 rand = "0.5.5"
 winit = "0.17.2"
 gfx-hal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" }
-gfx-backend-metal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" , optional = true}
-
+gfx-backend-metal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" }
 
 [dependencies.sdl2]
 version = "0.31.0"
 features = [ "bundled", "static-link" ]
+
 
