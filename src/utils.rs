@@ -5,6 +5,8 @@ use hal::{
     Backend,
     buffer,
     Device,
+    format::{Aspects, Format, Swizzle},
+    image::{self as img, ViewCapabilities},
     memory::Properties,
     MemoryType,
 };
@@ -26,6 +28,7 @@ pub struct UniformBlock {
 pub struct Vertex {
     pub position: [f32; 3],
     pub color: [f32; 4],
+    pub uv: [f32; 2],
 }
 
 pub fn load_obj(fname: String) -> Vec<Vertex> {
@@ -53,6 +56,7 @@ pub fn load_obj(fname: String) -> Vec<Vertex> {
                 temp_vertex = Vertex {
                     position: [x, y * 1.2 + 1.0, z],
                     color: [1.0, 0.2, 1.0, 1.0],
+                    uv: [1.0, 1.0],
                 };
 
                 verticies.push(temp_vertex);
@@ -146,6 +150,62 @@ pub fn push_constant_size<T>() -> usize {
     assert!(type_size % PUSH_CONSTANT_SIZE == 0);
 
     type_size / PUSH_CONSTANT_SIZE
+}
+
+pub fn create_image<B: Backend>(
+    device: &B::Device,
+    memory_types: &[MemoryType],
+    width: u32,
+    height: u32,
+    format: Format,
+    usage: img::Usage,
+    aspects: Aspects,
+) -> (B::Image, B::Memory, B::ImageView) {
+    let kind = img::Kind::D2(width, height, 1, 1);
+
+    let unbound_image = device
+        .create_image(
+            kind,
+            1,
+            format,
+            img::Tiling::Optimal,
+            usage,
+            ViewCapabilities::empty(),
+        ).expect("Failed to create unbound image");
+
+    let image_req = device.get_image_requirements(&unbound_image);
+
+    let device_type = memory_types
+        .iter()
+        .enumerate()
+        .position(|(id, memory_type)| {
+            image_req.type_mask & (1 << id) != 0
+                && memory_type.properties.contains(Properties::DEVICE_LOCAL)
+        }).unwrap()
+        .into();
+
+    let image_memory = device
+        .allocate_memory(device_type, image_req.size)
+        .expect("Failed to allocate image");
+
+    let image = device
+        .bind_image_memory(&image_memory, 0, unbound_image)
+        .expect("Failed to bind image");
+
+    let image_view = device
+        .create_image_view(
+            &image,
+            img::ViewKind::D2,
+            format,
+            Swizzle::NO,
+            img::SubresourceRange {
+                aspects,
+                levels: 0..1,
+                layers: 0..1,
+            },
+        ).expect("Failed to create image view");
+
+    (image, image_memory, image_view)
 }
 
 
