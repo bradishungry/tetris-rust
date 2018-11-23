@@ -5,9 +5,8 @@ use winit;
 use winit::WindowEvent::*;
 
 //hal
-use back;
+use back::{Backend, self};
 use hal::{
-    adapter::MemoryTypeId,
     buffer,
     command::{ClearColor, ClearValue},
     format::{Aspects, ChannelType, Format, Swizzle},
@@ -19,15 +18,16 @@ use hal::{
     },
     pool::CommandPoolCreateFlags,
     pso::{
-        AttributeDesc, BlendState, ColorBlendDesc, ColorMask, Element, EntryPoint, GraphicsPipelineDesc, GraphicsShaderSet,
-        PipelineStage, Rasterizer, Rect, VertexBufferDesc, Viewport,
+        AttributeDesc, BlendState, ColorBlendDesc, ColorMask, Descriptor, DescriptorRangeDesc, DescriptorSetLayoutBinding,
+        DescriptorSetWrite, DescriptorType, Element, EntryPoint, GraphicsPipelineDesc, GraphicsShaderSet,
+        PipelineStage, Rasterizer, Rect, ShaderStageFlags, VertexBufferDesc, Viewport,
     },
     queue::Submission,
-    Backbuffer, Device, FrameSync, Graphics, Instance, PhysicalDevice, Primitive, Surface, SwapImageIndex,
+    Backbuffer, Device, DescriptorPool, FrameSync, Graphics, Instance, PhysicalDevice, Primitive, Surface, SwapImageIndex,
     Swapchain, SwapchainConfig,
 };
 
-use utils::{self, Vertex};
+use utils::{self, PushConstants, UniformBlock, Vertex};
 
 const MESH: &[Vertex] = &[
     Vertex {
@@ -72,7 +72,7 @@ pub fn game_loop() {
 
     let instance = back::Instance::create("Tetris", 1);
     let mut surface = instance.create_surface(&window);
-    let mut adapter = instance.enumerate_adapters().remove(0);
+    let adapter = instance.enumerate_adapters().remove(0);
     let (device, mut queue_group) = adapter
         .open_with::<_, Graphics>(1, |family| surface.supports_queue_family(family))
         .unwrap();
@@ -126,7 +126,24 @@ pub fn game_loop() {
         device.create_render_pass(&[color_attachment], &[subpass], &[dependency]).unwrap()
     };
 
-    let pipeline_layout = device.create_pipeline_layout(&[], &[]).unwrap();
+    let set_layout = device.create_descriptor_set_layout(
+        &[DescriptorSetLayoutBinding {
+            binding: 0,
+            ty: DescriptorType::UniformBuffer,
+            count: 1,
+            stage_flags: ShaderStageFlags::VERTEX,
+            immutable_samplers: false,
+        }],
+        &[],
+    ).unwrap();
+
+    let num_push_constants = {
+        let size_in_bytes = std::mem::size_of::<PushConstants>();
+        let size_of_push_constant = std::mem::size_of::<u32>();
+        size_in_bytes / size_of_push_constant
+    };
+    
+    let pipeline_layout = device.create_pipeline_layout(vec![&set_layout], &[(ShaderStageFlags::VERTEX, 0..(num_push_constants as u32))], ).unwrap();
 
     let vertex_shader_module = {
         let spirv = include_bytes!("../assets/gen/shaders/basic.glslv.spv");
@@ -206,6 +223,16 @@ pub fn game_loop() {
             .unwrap()
     };
 
+    let mut desc_pool = device.create_descriptor_pool(
+        1,
+        &[DescriptorRangeDesc {
+            ty: DescriptorType::UniformBuffer,
+            count: 1,
+        }],
+    ).unwrap();
+
+    let desc_set = desc_pool.allocate_set(&set_layout).unwrap();
+
     let memory_types = physical_device.memory_properties().memory_types;
     
     let teapot = utils::load_obj(String::from("../assets/models/teapot.obj"));
@@ -215,42 +242,49 @@ pub fn game_loop() {
         MESH
     };
 
-    //println!("{:?}", mesh);
+    let (vertex_buffer, vertex_buffer_memory) = utils::create_buffer::<Backend, Vertex>(
+        &device,
+        &memory_types,
+        Properties::CPU_VISIBLE,
+        buffer::Usage::VERTEX,
+        &mesh,
+    );
 
-    let (vertex_buffer, vertex_buffer_memory) = {
-        let item_count = mesh.len();
-        let stride = std::mem::size_of::<Vertex>() as u64;
-        let buffer_len = item_count as u64 * stride;
-        let unbound_buffer = device
-            .create_buffer(buffer_len, buffer::Usage::VERTEX)
-            .unwrap();
+    let (uniform_buffer, mut uniform_memory) = utils::create_buffer::<Backend, UniformBlock>(
+        &device,
+        &memory_types,
+        Properties::CPU_VISIBLE,
+        buffer::Usage::UNIFORM,
+        &[UniformBlock {
+            projection: Default::default(),
+        }],
+    );
 
-        let req = device.get_buffer_requirements(&unbound_buffer);
+    device.write_descriptor_sets(vec![DescriptorSetWrite {
+        set: &desc_set,
+        binding: 0,
+        array_offset: 0,
+        descriptors: Some(Descriptor::Buffer(&uniform_buffer, None..None)),
+    }]);
 
-        let upload_type = memory_types
-            .iter()
-            .enumerate()
-            .find(|(id, ty)| {
-                let type_supported = req.type_mask & (1_u64 << id) != 0;
-                type_supported && ty.properties.contains(Properties::CPU_VISIBLE)
-            }).map(|(id, _ty)| MemoryTypeId(id))
-            .expect("Could not find approprate vertex buffer memory type.");
-
-        let buffer_memory = device.allocate_memory(upload_type, req.size).unwrap();
-        let buffer = device
-            .bind_buffer_memory(&buffer_memory, 0, unbound_buffer)
-            .unwrap();
-        
-        {
-            let mut dest = device
-                .acquire_mapping_writer::<Vertex>(&buffer_memory, 0..buffer_len)
-                .unwrap();
-            dest.copy_from_slice(mesh);
-            device.release_mapping_writer(dest);
-        }
-
-        (buffer, buffer_memory)
-    };
+    let diamonds = vec![
+        PushConstants {
+            position: [-1.0, -1.0, 0.0],
+            tint: [1.0, 0.0, 0.0, 1.0],
+        },
+        PushConstants {
+            position: [1.0, -1.0, 0.0],
+            tint: [0.0, 1.0, 0.0, 1.0],
+        },
+        PushConstants {
+            position: [-1.0, 1.0, 0.0],
+            tint: [0.0, 0.0, 1.0, 1.0],
+        },
+        PushConstants {
+            position: [1.0, 1.0, 0.0],
+            tint: [1.0, 1.0, 1.0, 1.0],
+        },
+    ];
 
     let frame_semaphore = device.create_semaphore().unwrap();
     let present_semaphore = device.create_semaphore().unwrap();
@@ -372,6 +406,25 @@ pub fn game_loop() {
             Some(i) => ::std::thread::sleep(i),
             _ => (),
         };
+        
+        let (width, height) = (extent.width, extent.height);
+        let aspect_corrected_x = height as f32 / width as f32;
+        let zoom = (delta_time.as_secs() as f32).cos() * 0.33 + 0.67;
+        let x_scale = aspect_corrected_x * zoom;
+        let y_scale = zoom;
+
+        utils::fill_buffer::<Backend, UniformBlock>(
+            &device,
+            &mut uniform_memory,
+            &[UniformBlock {
+                projection: [
+                    [x_scale, 0.0, 0.0, 0.0],
+                    [0.0, y_scale, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ],
+            }],
+        );
 
         command_pool.reset();
 
@@ -407,6 +460,8 @@ pub fn game_loop() {
             command_buffer.bind_graphics_pipeline(&pipeline);
             command_buffer.bind_vertex_buffers(0, vec![(&vertex_buffer, 0)]);
 
+            command_buffer.bind_graphics_descriptor_sets(&pipeline_layout, 0, vec![&desc_set], &[]);
+
             {
                 // Clear the screen and begin the render pass.
                 let mut encoder = command_buffer.begin_render_pass_inline(
@@ -417,7 +472,22 @@ pub fn game_loop() {
                 );
 
                 let num_vertices = mesh.len() as u32;
-                encoder.draw(0..num_vertices, 0..1);
+                
+                for diamond in &diamonds {
+                    let push_constants = {
+                        let start_ptr = diamond as *const PushConstants as *const u32;
+                        unsafe { std::slice::from_raw_parts(start_ptr, num_push_constants) }
+                    };
+                    
+                    encoder.push_graphics_constants(
+                        &pipeline_layout,
+                        ShaderStageFlags::VERTEX,
+                        0,
+                        push_constants,
+                        );
+             
+                    encoder.draw(0..num_vertices, 0..1);
+                }
             }
 
             // Finish building the command buffer - it's now ready to send to the
@@ -461,6 +531,8 @@ pub fn game_loop() {
     device.destroy_shader_module(vertex_shader_module);
     device.destroy_shader_module(fragment_shader_module);
     device.destroy_command_pool(command_pool.into_raw());
+    device.destroy_buffer(uniform_buffer);
+    device.free_memory(uniform_memory);
     device.destroy_buffer(vertex_buffer);
     device.free_memory(vertex_buffer_memory);
     device.destroy_semaphore(frame_semaphore);
