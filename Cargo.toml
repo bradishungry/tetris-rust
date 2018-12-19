@@ -2,15 +2,21 @@
 name = "tetris"
 version = "0.1.0"
 authors = ["bradboswell"]
+build = "build.rs"
 
 [dependencies]
+image = "0.19"
 rand = "0.5.5"
+wavefront_obj = "5.1"
 winit = "0.17.2"
-gfx-hal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" }
-gfx-backend-metal = { git = "https://github.com/gfx-rs/gfx.git", rev= "bd7f058" }
 
-[dependencies.sdl2]
-version = "0.31.0"
-features = [ "bundled", "static-link" ]
+[dependencies.gfx-hal]
+git = "https://github.com/gfx-rs/gfx"
+rev = "41e9611"
 
+[dependencies.gfx-backend-metal]
+git = "https://github.com/gfx-rs/gfx"
+rev = "41e9611"
 
+[build-dependencies]
+shaderc = "0.3.11"

@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::Read;
+use wavefront_obj;
 
 use hal::{
     Backend,
@@ -31,6 +32,57 @@ pub struct Vertex {
     pub uv: [f32; 2],
 }
 
+pub const MESH: &[Vertex] = &[
+    Vertex {
+        position: [0.0, -1.0, 0.0],
+        color: [1.0, 0.0, 0.0, 1.0],
+        uv: [1.0, 0.0],
+    },
+    Vertex {
+        position: [-1.0, 0.0, 0.0],
+        color: [0.0, 0.0, 1.0, 1.0],
+        uv: [0.0, 0.0],
+    },
+    Vertex {
+        position: [0.0, 1.0, 0.0],
+        color: [0.0, 1.0, 0.0, 1.0],
+        uv: [0.0, 1.0],
+    },
+    Vertex {
+        position: [0.0, -1.0, 0.0],
+        color: [1.0, 0.0, 0.0, 1.0],
+        uv: [1.0, 0.0],
+    },
+    Vertex {
+        position: [0.0, 1.0, 0.0],
+        color: [0.0, 1.0, 0.0, 1.0],
+        uv: [0.0, 1.0],
+    },
+    Vertex {
+        position: [1.0, 0.0, 0.0],
+        color: [1.0, 1.0, 0.0, 1.0],
+        uv: [1.0, 1.0],
+    },
+    ];
+
+pub fn load(fname: String) -> Vec<Vertex> {
+    let meshes = wavefront_obj::obj::parse(fname).unwrap();
+    let (vertices, uvs) = (
+        meshes.objects[0].vertices.clone(),
+        meshes.objects[0].tex_vertices.clone() //TODO: Pointer to vertices? Move and destroy?
+        );
+    let mut converted_vertices: Vec<Vertex> = 
+        vertices.into_iter().map(|vert|
+            Vertex { 
+                position: [vert.x as f32, vert.y as f32, vert.z as f32],
+                color: [1.0, 1.0, 1.0, 1.0],
+                uv: [1.0, 1.0],
+            }
+        ).collect();
+
+    converted_vertices
+}
+
 pub fn load_obj(fname: String) -> Vec<Vertex> {
     let mut f = File::open(fname).expect("File not found!!");
     let mut file_content = String::new();
@@ -42,6 +94,7 @@ pub fn load_obj(fname: String) -> Vec<Vertex> {
     let scale = 0.27;
 
     let mut verticies: Vec<Vertex> = Vec::new();
+    let mut sorted_verticies: Vec<Vertex> = Vec::new();
     let mut temp_vertex: Vertex;
     for line in words {
         //println!("{:?}", line[0]);
@@ -60,9 +113,27 @@ pub fn load_obj(fname: String) -> Vec<Vertex> {
                 };
 
                 verticies.push(temp_vertex);
-            }
+            },
+
+            "f" => {
+                sorted_verticies.push(
+                    verticies[line[1].parse::<i32>().unwrap() as usize]
+                    );
+                sorted_verticies.push(
+                    verticies[line[2].parse::<i32>().unwrap() as usize]
+                    );
+                sorted_verticies.push(
+                    verticies[line[3].parse::<i32>().unwrap() as usize]
+                    );
+            },
             _ => (),
         };
+    }
+
+    if !sorted_verticies.is_empty(){
+        for v in sorted_verticies {
+
+        }
     }
 
     verticies
@@ -75,7 +146,7 @@ pub fn empty_buffer<B: Backend, Item>(
     properties: Properties,
     usage: buffer::Usage,
     item_count: usize,
-) -> (B::Buffer, B::Memory) {
+    ) -> (B::Buffer, B::Memory) {
 
     let item_count = item_count;     
     let stride = ::std::mem::size_of::<Item>() as u64;
@@ -102,7 +173,7 @@ pub fn fill_buffer<B: Backend, Item: Copy>(
     device: &B::Device,
     buffer_memory: &mut B::Memory,
     items: &[Item],
-) {
+    ) {
 
     let stride = ::std::mem::size_of::<Item>() as u64;
     let buffer_len = items.len() as u64 * stride;
@@ -121,7 +192,7 @@ pub fn create_buffer<B: Backend, Item: Copy>(
     properties: Properties,
     usage: buffer::Usage,
     items: &[Item],
-) -> (B::Buffer, B::Memory) {
+    ) -> (B::Buffer, B::Memory) {
     let (empty_buffer, mut empty_buffer_memory) =
         empty_buffer::<B, Item>(device, memory_types, properties, usage, items.len());
 
@@ -160,7 +231,7 @@ pub fn create_image<B: Backend>(
     format: Format,
     usage: img::Usage,
     aspects: Aspects,
-) -> (B::Image, B::Memory, B::ImageView) {
+    ) -> (B::Image, B::Memory, B::ImageView) {
     let kind = img::Kind::D2(width, height, 1, 1);
 
     let unbound_image = device
@@ -171,7 +242,7 @@ pub fn create_image<B: Backend>(
             img::Tiling::Optimal,
             usage,
             ViewCapabilities::empty(),
-        ).expect("Failed to create unbound image");
+            ).expect("Failed to create unbound image");
 
     let image_req = device.get_image_requirements(&unbound_image);
 
@@ -182,7 +253,7 @@ pub fn create_image<B: Backend>(
             image_req.type_mask & (1 << id) != 0
                 && memory_type.properties.contains(Properties::DEVICE_LOCAL)
         }).unwrap()
-        .into();
+    .into();
 
     let image_memory = device
         .allocate_memory(device_type, image_req.size)
@@ -203,7 +274,7 @@ pub fn create_image<B: Backend>(
                 levels: 0..1,
                 layers: 0..1,
             },
-        ).expect("Failed to create image view");
+            ).expect("Failed to create image view");
 
     (image, image_memory, image_view)
 }
